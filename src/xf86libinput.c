@@ -3353,8 +3353,6 @@ xf86libinput_pre_init(InputDriverPtr drv,
 
 	driver_data = calloc(1, sizeof(*driver_data));
 
-	driver_data->options.tap_drag_lock_timeout = 300;
-
 	if (!driver_data)
 		goto fail;
 
@@ -3392,6 +3390,7 @@ xf86libinput_pre_init(InputDriverPtr drv,
 		parent_driver_data = parent->private;
 		if (!parent_driver_data) /* parent already removed again */
 			goto fail;
+
 
 		xf86IDrvMsg(pInfo, X_INFO, "is a virtual subdevice\n");
 		shared_device = xf86libinput_shared_ref(parent_driver_data->shared_device);
@@ -4697,6 +4696,9 @@ LibinputInitTapDragProperty(DeviceIntPtr dev,
 						     LIBINPUT_PROP_TAP_DRAG_DEFAULT,
 						     XA_INTEGER, 8,
 						     1, &drag);
+	driver_data->options.tap_drag_lock_timeout
+		= libinput_device_config_tap_get_default_drag_lock_timeout(device);
+
 }
 
 static void
