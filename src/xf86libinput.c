@@ -150,6 +150,7 @@ struct xf86libinput {
 		BOOL tapping;
 		BOOL tap_drag;
 		BOOL tap_drag_lock;
+		int tap_drag_lock_timeout;
 		enum libinput_config_tap_button_map tap_button_map;
 		BOOL natural_scrolling;
 		BOOL left_handed;
@@ -592,6 +593,15 @@ LibinputApplyConfigTap(DeviceIntPtr dev,
 		xf86IDrvMsg(pInfo, X_ERROR,
 			    "Failed to set Tapping DragLock to %d\n",
 			    driver_data->options.tap_drag_lock);
+
+
+
+	if (libinput_device_config_tap_get_finger_count(device) > 0 &&
+	    libinput_device_config_tap_set_drag_lock_timeout(device,
+							     driver_data->options.tap_drag_lock_timeout) != LIBINPUT_CONFIG_STATUS_SUCCESS)
+		xf86IDrvMsg(pInfo, X_ERROR,
+			    "Failed to set Tapping DragLock Timeout to %d\n",
+			    driver_data->options.tap_drag_lock_timeout);
 
 	if (libinput_device_config_tap_get_finger_count(device) > 0 &&
 	    libinput_device_config_tap_set_drag_enabled(device,
@@ -3342,6 +3352,9 @@ xf86libinput_pre_init(InputDriverPtr drv,
 	pInfo->switch_mode = NULL;
 
 	driver_data = calloc(1, sizeof(*driver_data));
+
+	driver_data->options.tap_drag_lock_timeout = 300;
+
 	if (!driver_data)
 		goto fail;
 
@@ -3541,6 +3554,7 @@ static Atom prop_tap_drag;
 static Atom prop_tap_drag_default;
 static Atom prop_tap_drag_lock;
 static Atom prop_tap_drag_lock_default;
+static Atom prop_tap_drag_lock_timeout;
 static Atom prop_tap_buttonmap;
 static Atom prop_tap_buttonmap_default;
 static Atom prop_calibration;
@@ -3794,6 +3808,39 @@ LibinputSetPropertyTapDragLock(DeviceIntPtr dev,
 
 	return Success;
 }
+
+static inline int
+LibinputSetPropertyTapDragLockTimeout(DeviceIntPtr dev,
+			       Atom atom,
+			       XIPropertyValuePtr val,
+			       BOOL checkonly)
+{
+	InputInfoPtr pInfo = dev->public.devicePrivate;
+	struct xf86libinput *driver_data = pInfo->private;
+	struct libinput_device *device = driver_data->shared_device->device;
+	int* data;
+
+
+	if (val->format != 32 || val->size != 1 || val->type != XA_INTEGER)
+		return BadMatch;
+
+	data = (int*)val->data;
+	if (checkonly) {
+		if (*data < -1 || *data > 65535)
+			return BadValue;
+
+		if (!xf86libinput_check_device(dev, atom))
+			return BadMatch;
+
+		if (libinput_device_config_tap_get_finger_count(device) == 0)
+			return BadMatch;
+	} else {
+		driver_data->options.tap_drag_lock_timeout = *data;
+	}
+
+	return Success;
+}
+
 
 static inline int
 LibinputSetPropertyTapButtonmap(DeviceIntPtr dev,
@@ -4494,6 +4541,8 @@ LibinputSetProperty(DeviceIntPtr dev, Atom atom, XIPropertyValuePtr val,
 		rc = LibinputSetPropertyTapDrag(dev, atom, val, checkonly);
 	else if (atom == prop_tap_drag_lock)
 		rc = LibinputSetPropertyTapDragLock(dev, atom, val, checkonly);
+	else if (atom == prop_tap_drag_lock_timeout)
+		rc = LibinputSetPropertyTapDragLockTimeout(dev, atom, val, checkonly);
 	else if (atom == prop_tap_buttonmap)
 		rc = LibinputSetPropertyTapButtonmap(dev, atom, val, checkonly);
 	else if (atom == prop_calibration)
@@ -4675,6 +4724,26 @@ LibinputInitTapDragLockProperty(DeviceIntPtr dev,
 							  LIBINPUT_PROP_TAP_DRAG_LOCK_DEFAULT,
 							  XA_INTEGER, 8,
 							  1, &drag_lock);
+}
+
+
+static void
+LibinputInitTapDragLockTimeoutProperty(DeviceIntPtr dev,
+				struct xf86libinput *driver_data,
+				struct libinput_device *device)
+{
+	int drag_lock = driver_data->options.tap_drag_lock_timeout;
+
+	if (!subdevice_has_capabilities(dev, CAP_POINTER))
+		return;
+
+	if (libinput_device_config_tap_get_finger_count(device) == 0)
+		return;
+
+	prop_tap_drag_lock_timeout = LibinputMakeProperty(dev,
+						  LIBINPUT_PROP_TAP_DRAG_LOCK_TIMEOUT,
+						  XA_INTEGER, 32,
+						  1, &drag_lock);
 }
 
 static void
@@ -5464,6 +5533,7 @@ LibinputInitProperty(DeviceIntPtr dev)
 	LibinputInitTapProperty(dev, driver_data, device);
 	LibinputInitTapDragProperty(dev, driver_data, device);
 	LibinputInitTapDragLockProperty(dev, driver_data, device);
+	LibinputInitTapDragLockTimeoutProperty(dev, driver_data ,device);
 	LibinputInitTapButtonmapProperty(dev, driver_data, device);
 	LibinputInitNaturalScrollProperty(dev, driver_data, device);
 	LibinputInitDisableWhileTypingProperty(dev, driver_data, device);

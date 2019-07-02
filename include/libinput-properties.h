@@ -42,6 +42,9 @@
 /* Tap drag lock default enabled/disabled: BOOL, 1 value, read-only */
 #define LIBINPUT_PROP_TAP_DRAG_LOCK_DEFAULT "libinput Tapping Drag Lock Enabled Default"
 
+/* Tap drag lock timeout in milliseonds: INT 300 */
+#define LIBINPUT_PROP_TAP_DRAG_LOCK_TIMEOUT "libinput Tapping Drag Lock Timeout"
+
 /* Tap button order: BOOL, 2 values in order LRM, LMR, only one may be set
    at any time */
 #define LIBINPUT_PROP_TAP_BUTTONMAP "libinput Tapping Button Mapping Enabled"
