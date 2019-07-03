@@ -595,7 +595,6 @@ LibinputApplyConfigTap(DeviceIntPtr dev,
 			    driver_data->options.tap_drag_lock);
 
 
-
 	if (libinput_device_config_tap_get_finger_count(device) > 0 &&
 	    libinput_device_config_tap_set_drag_lock_timeout(device,
 							     driver_data->options.tap_drag_lock_timeout) != LIBINPUT_CONFIG_STATUS_SUCCESS)
@@ -2550,6 +2549,32 @@ xf86libinput_parse_tap_drag_lock_option(InputInfoPtr pInfo,
 	return drag_lock;
 }
 
+static inline int
+xf86libinput_parse_tap_drag_lock_timeout_option(InputInfoPtr pInfo,
+					struct libinput_device *device)
+{
+	int drag_lock_timeout;
+
+	if (libinput_device_config_tap_get_finger_count(device) == 0)
+		return FALSE;
+
+
+	drag_lock_timeout = xf86SetIntOption(pInfo->options,
+		"TappingDragLockTimeout",
+		libinput_device_config_tap_get_default_drag_lock_timeout(device)
+	);
+
+	if (libinput_device_config_tap_set_drag_lock_timeout(device, drag_lock_timeout) !=
+		LIBINPUT_CONFIG_STATUS_SUCCESS) {
+		xf86IDrvMsg(pInfo, X_ERROR,
+				"Failed to set Tapping Drag Lock Timeout to %d\n",
+				drag_lock_timeout);
+	}
+
+
+	return drag_lock_timeout;
+}
+
 static inline enum libinput_config_tap_button_map
 xf86libinput_parse_tap_buttonmap_option(InputInfoPtr pInfo,
 					struct libinput_device *device)
@@ -3103,6 +3128,7 @@ xf86libinput_parse_options(InputInfoPtr pInfo,
 	options->tapping = xf86libinput_parse_tap_option(pInfo, device);
 	options->tap_drag = xf86libinput_parse_tap_drag_option(pInfo, device);
 	options->tap_drag_lock = xf86libinput_parse_tap_drag_lock_option(pInfo, device);
+	options->tap_drag_lock_timeout = xf86libinput_parse_tap_drag_lock_timeout_option(pInfo, device);
 	options->tap_button_map = xf86libinput_parse_tap_buttonmap_option(pInfo, device);
 	options->speed = xf86libinput_parse_accel_option(pInfo, device);
 	options->accel_profile = xf86libinput_parse_accel_profile_option(pInfo, device);
@@ -4696,8 +4722,6 @@ LibinputInitTapDragProperty(DeviceIntPtr dev,
 						     LIBINPUT_PROP_TAP_DRAG_DEFAULT,
 						     XA_INTEGER, 8,
 						     1, &drag);
-	driver_data->options.tap_drag_lock_timeout
-		= libinput_device_config_tap_get_default_drag_lock_timeout(device);
 
 }
 
@@ -4726,6 +4750,7 @@ LibinputInitTapDragLockProperty(DeviceIntPtr dev,
 							  LIBINPUT_PROP_TAP_DRAG_LOCK_DEFAULT,
 							  XA_INTEGER, 8,
 							  1, &drag_lock);
+
 }
 
 
@@ -4734,18 +4759,20 @@ LibinputInitTapDragLockTimeoutProperty(DeviceIntPtr dev,
 				struct xf86libinput *driver_data,
 				struct libinput_device *device)
 {
-	int drag_lock = driver_data->options.tap_drag_lock_timeout;
-
 	if (!subdevice_has_capabilities(dev, CAP_POINTER))
 		return;
 
 	if (libinput_device_config_tap_get_finger_count(device) == 0)
 		return;
 
+	int drag_lock_timeout
+		= libinput_device_config_tap_get_drag_lock_timeout(device);
+
+
 	prop_tap_drag_lock_timeout = LibinputMakeProperty(dev,
 						  LIBINPUT_PROP_TAP_DRAG_LOCK_TIMEOUT,
 						  XA_INTEGER, 32,
-						  1, &drag_lock);
+						  1, &drag_lock_timeout);
 }
 
 static void
