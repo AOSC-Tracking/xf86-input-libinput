@@ -2558,7 +2558,6 @@ xf86libinput_parse_tap_drag_lock_timeout_option(InputInfoPtr pInfo,
 	if (libinput_device_config_tap_get_finger_count(device) == 0)
 		return FALSE;
 
-
 	drag_lock_timeout = xf86SetIntOption(pInfo->options,
 		"TappingDragLockTimeout",
 		libinput_device_config_tap_get_default_drag_lock_timeout(device)
@@ -2570,7 +2569,6 @@ xf86libinput_parse_tap_drag_lock_timeout_option(InputInfoPtr pInfo,
 				"Failed to set Tapping Drag Lock Timeout to %d\n",
 				drag_lock_timeout);
 	}
-
 
 	return drag_lock_timeout;
 }
@@ -3580,6 +3578,7 @@ static Atom prop_tap_drag_default;
 static Atom prop_tap_drag_lock;
 static Atom prop_tap_drag_lock_default;
 static Atom prop_tap_drag_lock_timeout;
+static Atom prop_tap_drag_lock_timeout_default;
 static Atom prop_tap_buttonmap;
 static Atom prop_tap_buttonmap_default;
 static Atom prop_calibration;
@@ -3851,7 +3850,7 @@ LibinputSetPropertyTapDragLockTimeout(DeviceIntPtr dev,
 
 	data = (int*)val->data;
 	if (checkonly) {
-		if (*data < -1 || *data > 65535)
+		if (*data < 0 || *data > 65535)
 			return BadValue;
 
 		if (!xf86libinput_check_device(dev, atom))
@@ -4759,13 +4758,15 @@ LibinputInitTapDragLockTimeoutProperty(DeviceIntPtr dev,
 				struct xf86libinput *driver_data,
 				struct libinput_device *device)
 {
+	int drag_lock_timeout;
+
 	if (!subdevice_has_capabilities(dev, CAP_POINTER))
 		return;
 
 	if (libinput_device_config_tap_get_finger_count(device) == 0)
 		return;
 
-	int drag_lock_timeout
+	drag_lock_timeout
 		= libinput_device_config_tap_get_drag_lock_timeout(device);
 
 
@@ -4773,6 +4774,14 @@ LibinputInitTapDragLockTimeoutProperty(DeviceIntPtr dev,
 						  LIBINPUT_PROP_TAP_DRAG_LOCK_TIMEOUT,
 						  XA_INTEGER, 32,
 						  1, &drag_lock_timeout);
+
+	if (!prop_tap_drag_lock_timeout)
+		return;
+	drag_lock_timeout = libinput_device_config_tap_get_default_drag_lock_timeout(device);
+	prop_tap_drag_lock_timeout_default = LibinputMakeProperty(dev,
+							  LIBINPUT_PROP_TAP_DRAG_LOCK_TIMEOUT_DEFAULT,
+							  XA_INTEGER, 32,
+							  1, &drag_lock_timeout);
 }
 
 static void
