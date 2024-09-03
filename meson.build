@@ -34,7 +34,7 @@ pkgconfig = import('pkgconfig')
 dep_xserver = dependency('xorg-server', version: '>= 1.19')
 dep_xproto = dependency('xproto')
 dep_inputproto = dependency('inputproto', version: '>= 2.2')
-dep_libinput = dependency('libinput', version: '>= 1.11.0')
+dep_libinput = dependency('libinput', version: '>= 1.26.0')
 
 config_h = configuration_data()
 config_h.set('PACKAGE_VERSION_MAJOR', driver_version[0])
